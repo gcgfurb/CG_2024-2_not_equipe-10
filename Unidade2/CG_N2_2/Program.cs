@@ -11,7 +11,7 @@ namespace gcgcg
             var nativeWindowSettings = new NativeWindowSettings()
             {
                 ClientSize = new Vector2i(800, 800),
-                Title = "CG_N2_Exemplo",
+                Title = "Primitivas geométricas",
                 Flags = ContextFlags.ForwardCompatible,
             };
 
