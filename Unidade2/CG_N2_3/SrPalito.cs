@@ -1,4 +1,4 @@
-﻿//Ricardo, Adam, Erick
+//Ricardo, Adam, Erick
 #define cg_debug
 using CG_Biblioteca;
 using System;
@@ -12,7 +12,8 @@ namespace gcgcg
         private double raio = 0.5;
 
         private Ponto4D ptoIni = new(); //Pé (base)
-        private Ponto4D ptoFim = new(); //Cabeça (topo)
+        private Ponto4D ptoFim = new(); //Pescoço
+        private readonly Circulo cabeca; //Cabeça (topo)
 
         public SrPalito(Objeto paiRef, ref char _rotulo) : base(paiRef, ref _rotulo)
         {
@@ -21,6 +22,8 @@ namespace gcgcg
 
             PontosAdicionar(ptoIni);
             PontosAdicionar(ptoFim);
+
+            cabeca = new Circulo(this, ref _rotulo, 0.1, ptoFim);
 
             Atualizar();
         }
@@ -39,6 +42,9 @@ namespace gcgcg
             //Substituir o ponto final pelo novo gerado
             PontosAlterar(ptoFim, 1);
             ObjetoAtualizar();
+
+            //Atualiza a posição da cabeça
+            cabeca.Atualizar(ptoFim);
         }
 
         public void AtualizarPe(double peInc)
