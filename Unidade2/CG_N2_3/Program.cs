@@ -11,16 +11,13 @@ namespace gcgcg
         {
             var nativeWindowSettings = new NativeWindowSettings()
             {
-                Size = new Vector2i(800, 800),
-                Title = "CG_N2_Exemplo",
-
+                ClientSize = new Vector2i(800, 800),
+                Title = "Sr. Palito",
                 Flags = ContextFlags.ForwardCompatible,
             };
 
-            using (var window = new Mundo(GameWindowSettings.Default, nativeWindowSettings))
-            {
-                window.Run();
-            }
+            using var window = new Mundo(GameWindowSettings.Default, nativeWindowSettings);
+            window.Run();
         }
     }
 }
