@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <RootNamespace>gcgcg</RootNamespace>
-    <AssemblyName>CG_N3_Exemplo</AssemblyName>
+    <AssemblyName>CG_N3</AssemblyName>
     <TargetFramework>net8.0</TargetFramework>
     <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
@@ -43,12 +43,7 @@
     </None>
   </ItemGroup>
 
-  <!-- <ItemGroup>
-    <Reference Include="CG_Biblioteca">
-      <HintPath>..\..\..\disciplina_CG_2024_2\CG_Biblioteca\bin\Debug\net8.0\CG_Biblioteca.dll</HintPath>
-    </Reference>
-  </ItemGroup> -->
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\disciplina_CG_2024_2\CG_Biblioteca\CG_Biblioteca.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\CG_Biblioteca\CG_Biblioteca.csproj"/>
+	</ItemGroup>
 </Project>
