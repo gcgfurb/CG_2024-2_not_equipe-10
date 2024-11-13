@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <RootNamespace>gcgcg</RootNamespace>
-    <AssemblyName>CG_N3</AssemblyName>
+    <AssemblyName>CG_N3_Exemplo</AssemblyName>
     <TargetFramework>net8.0</TargetFramework>
     <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
