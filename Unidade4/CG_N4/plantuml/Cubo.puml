@@ -1,0 +1,7 @@
+@startuml
+class Cubo {
+    + Cubo(paiRef:Objeto, _rotulo:char)
+    + <<override>> ToString() : string
+}
+Objeto <|-- Cubo
+@enduml
