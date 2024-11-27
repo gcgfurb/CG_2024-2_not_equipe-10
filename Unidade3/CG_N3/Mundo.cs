@@ -333,10 +333,10 @@ namespace gcgcg
 
                 float[] _bbox =
                 {
-                    (float)objetoSelecionado.Bbox().obterMenorX, (float)objetoSelecionado.Bbox().obterMenorY, 0.0f, // A
-                    (float)objetoSelecionado.Bbox().obterMaiorX, (float)objetoSelecionado.Bbox().obterMenorY, 0.0f, // B
-                    (float)objetoSelecionado.Bbox().obterMaiorX, (float)objetoSelecionado.Bbox().obterMaiorY, 0.0f, // C
-                    (float)objetoSelecionado.Bbox().obterMenorX, (float)objetoSelecionado.Bbox().obterMaiorY, 0.0f // D
+                    (float)objetoSelecionado.Bbox().ObterMenorX, (float)objetoSelecionado.Bbox().ObterMenorY, 0.0f, // A
+                    (float)objetoSelecionado.Bbox().ObterMaiorX, (float)objetoSelecionado.Bbox().ObterMenorY, 0.0f, // B
+                    (float)objetoSelecionado.Bbox().ObterMaiorX, (float)objetoSelecionado.Bbox().ObterMaiorY, 0.0f, // C
+                    (float)objetoSelecionado.Bbox().ObterMenorX, (float)objetoSelecionado.Bbox().ObterMaiorY, 0.0f // D
                 };
 
                 _vertexBufferObject_bbox = GL.GenBuffer();

@@ -46,4 +46,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\CG_Biblioteca\CG_Biblioteca.csproj"/>
 	</ItemGroup>
+  <!-- <ItemGroup> pc erick
+		<ProjectReference Include="..\..\..\disciplina_CG_2024_2\CG_Biblioteca\CG_Biblioteca.csproj"/>
+	</ItemGroup> -->
 </Project>
