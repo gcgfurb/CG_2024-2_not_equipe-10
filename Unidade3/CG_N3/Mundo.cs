@@ -33,6 +33,8 @@ namespace gcgcg
 
         private int _vertexBufferObject_sruEixos;
         private int _vertexArrayObject_sruEixos;
+        private int _vertexBufferObject_bbox;
+        private int _vertexArrayObject_bbox;
 
         private Shader _shaderBranca;
         private Shader _shaderVermelha;
@@ -117,11 +119,13 @@ namespace gcgcg
                 Console.WriteLine(objetoSelecionado.ToString());
             else if (KeyboardState.IsKeyPressed(Keys.M) && objetoSelecionado != null)
                 objetoSelecionado.MatrizImprimir();
+            //TODO: não está atualizando a BBox com as transformações geométricas
             else if (KeyboardState.IsKeyPressed(Keys.I) && objetoSelecionado != null)
                 objetoSelecionado.MatrizAtribuirIdentidade();
             else if (KeyboardState.IsKeyPressed(Keys.D) && objetoSelecionado != null)
             {
                 objetoSelecionado.ObjetoRemover();
+                // Remover a seleção do objeto (para não ter uma bbox fantasma)
                 objetoSelecionado = mundo.GrafocenaBuscaProximo(mundo);
             }
             else if (KeyboardState.IsKeyPressed(Keys.V) && objetoSelecionado != null)
@@ -151,10 +155,41 @@ namespace gcgcg
                 objetoSelecionado.shaderObjeto = _shaderVerde;
             else if (KeyboardState.IsKeyPressed(Keys.B) && objetoSelecionado != null)
                 objetoSelecionado.shaderObjeto = _shaderAzul;
+            else if (KeyboardState.IsKeyPressed(Keys.Left) && objetoSelecionado != null)
+            {
+                objetoSelecionado.MatrizTranslacaoXYZ(-0.05, 0, 0);
+
+            }
+            else if (KeyboardState.IsKeyPressed(Keys.Right) && objetoSelecionado != null)
+            {
+                objetoSelecionado.MatrizTranslacaoXYZ(0.05, 0, 0);
+            }
+            else if (KeyboardState.IsKeyPressed(Keys.Up) && objetoSelecionado != null)
+            {
+                objetoSelecionado.MatrizTranslacaoXYZ(0, 0.05, 0);
+
+            }
+            else if (KeyboardState.IsKeyPressed(Keys.Down) && objetoSelecionado != null)
+            {
+                objetoSelecionado.MatrizTranslacaoXYZ(0, -0.05, 0);
+
+            }
             else if (KeyboardState.IsKeyPressed(Keys.PageUp) && objetoSelecionado != null)
                 objetoSelecionado.MatrizEscalaXYZ(2, 2, 2);
             else if (KeyboardState.IsKeyPressed(Keys.PageDown) && objetoSelecionado != null)
                 objetoSelecionado.MatrizEscalaXYZ(0.5, 0.5, 0.5);
+            else if (KeyboardState.IsKeyPressed(Keys.Home) && objetoSelecionado != null)
+                objetoSelecionado.MatrizEscalaXYZBBox(0.5, 0.5, 0.5);
+            else if (KeyboardState.IsKeyPressed(Keys.End) && objetoSelecionado != null)
+                objetoSelecionado.MatrizEscalaXYZBBox(2, 2, 2);
+            else if (KeyboardState.IsKeyPressed(Keys.D1) && objetoSelecionado != null)
+                objetoSelecionado.MatrizRotacao(10);
+            else if (KeyboardState.IsKeyPressed(Keys.D2) && objetoSelecionado != null)
+                objetoSelecionado.MatrizRotacao(-10);
+            else if (KeyboardState.IsKeyPressed(Keys.D3) && objetoSelecionado != null)
+                objetoSelecionado.MatrizRotacaoZBBox(10);
+            else if (KeyboardState.IsKeyPressed(Keys.D4) && objetoSelecionado != null)
+                objetoSelecionado.MatrizRotacaoZBBox(-10);
             else if (KeyboardState.IsKeyPressed(Keys.Enter)) // Finalizar objeto
             {
                 mundo.FilhoAdicionar(objetoEmProgresso);
@@ -166,7 +201,26 @@ namespace gcgcg
 
             #region Mouse
 
-            if (MouseState.IsButtonPressed(MouseButton.Right)) // Dispara apenas uma vez
+            if (MouseState.IsButtonPressed(MouseButton.Left))
+            {
+                var mousePto = new Ponto4D(MousePosition.X, MousePosition.Y);
+                var pto = Utilitario.NDC_TelaSRU(Size.X, Size.Y, mousePto);
+                //TODO: Corrigir para pegar as bordas da tela
+                foreach(Objeto obj in mundo.ObjetosLista())
+                {
+                    var borda = obj.Bbox().Dentro(pto);
+
+                    if (borda == true)
+                    {
+                        obj.Desenhar(new Transformacao4D());
+                        objetoSelecionado = obj;
+                    }
+                    else
+                        objetoSelecionado = null;
+                }               
+            }
+
+            else if (MouseState.IsButtonPressed(MouseButton.Right)) // Dispara apenas uma vez
             {
                 // Posição do mouse
                 var mousePto = new Ponto4D(MousePosition.X, MousePosition.Y);
@@ -234,6 +288,9 @@ namespace gcgcg
             GL.DeleteBuffer(_vertexBufferObject_sruEixos);
             GL.DeleteVertexArray(_vertexArrayObject_sruEixos);
 
+            GL.DeleteBuffer(_vertexBufferObject_bbox);
+            GL.DeleteVertexArray(_vertexArrayObject_bbox);
+
             GL.DeleteProgram(_shaderBranca.Handle);
             GL.DeleteProgram(_shaderVermelha.Handle);
             GL.DeleteProgram(_shaderVerde.Handle);
@@ -266,5 +323,44 @@ namespace gcgcg
 #endif
 #endif
         }
+
+#if CG_Gizmo
+        private void Gizmo_BBox() 
+        {
+            if (objetoSelecionado != null)
+            {
+#if CG_OpenGL && !CG_DirectX
+
+                float[] _bbox =
+                {
+                    (float)objetoSelecionado.Bbox().obterMenorX, (float)objetoSelecionado.Bbox().obterMenorY, 0.0f, // A
+                    (float)objetoSelecionado.Bbox().obterMaiorX, (float)objetoSelecionado.Bbox().obterMenorY, 0.0f, // B
+                    (float)objetoSelecionado.Bbox().obterMaiorX, (float)objetoSelecionado.Bbox().obterMaiorY, 0.0f, // C
+                    (float)objetoSelecionado.Bbox().obterMenorX, (float)objetoSelecionado.Bbox().obterMaiorY, 0.0f // D
+                };
+
+                _vertexBufferObject_bbox = GL.GenBuffer();
+                GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject_bbox);
+                GL.BufferData(BufferTarget.ArrayBuffer, _bbox.Length * sizeof(float), _bbox,
+                    BufferUsageHint.StaticDraw);
+                _vertexArrayObject_bbox = GL.GenVertexArray();
+                GL.BindVertexArray(_vertexArrayObject_bbox);
+                GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+                GL.EnableVertexAttribArray(0);
+
+                var transform = Matrix4.Identity;
+                GL.BindVertexArray(_vertexArrayObject_bbox);
+                _shaderAmarela.SetMatrix4("transform", transform);
+                _shaderAmarela.Use();
+                GL.DrawArrays(PrimitiveType.LineLoop, 0, (_bbox.Length / 3));
+
+#elif CG_DirectX && !CG_OpenGL
+      Console.WriteLine(" .. Coloque aqui o seu código em DirectX");
+#elif (CG_DirectX && CG_OpenGL) || (!CG_DirectX && !CG_OpenGL)
+      Console.WriteLine(" .. ERRO de Render - escolha OpenGL ou DirectX !!");
+#endif
+            }
+        }
+#endif
     }
 }
