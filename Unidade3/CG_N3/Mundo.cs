@@ -94,6 +94,7 @@ namespace gcgcg
 
 #if CG_Gizmo
             Gizmo_Sru3D();
+            Gizmo_BBox();
 #endif
             SwapBuffers();
         }
@@ -353,11 +354,6 @@ namespace gcgcg
                 _shaderAmarela.SetMatrix4("transform", transform);
                 _shaderAmarela.Use();
                 GL.DrawArrays(PrimitiveType.LineLoop, 0, (_bbox.Length / 3));
-
-#elif CG_DirectX && !CG_OpenGL
-      Console.WriteLine(" .. Coloque aqui o seu código em DirectX");
-#elif (CG_DirectX && CG_OpenGL) || (!CG_DirectX && !CG_OpenGL)
-      Console.WriteLine(" .. ERRO de Render - escolha OpenGL ou DirectX !!");
 #endif
             }
         }
