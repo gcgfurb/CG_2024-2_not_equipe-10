@@ -3,13 +3,10 @@
 
 using CG_Biblioteca;
 using OpenTK.Graphics.OpenGL4;
-using OpenTK.Windowing.Common;
-using OpenTK.Windowing.GraphicsLibraryFramework;
-using OpenTK.Windowing.Desktop;
-using System;
 using OpenTK.Mathematics;
-using System.Reflection.Metadata;
-using System.Resources;
+using OpenTK.Windowing.Common;
+using OpenTK.Windowing.Desktop;
+using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace gcgcg
 {
@@ -35,15 +32,17 @@ namespace gcgcg
         private Shader _shaderCiano;
         private Shader _shaderMagenta;
         private Shader _shaderAmarela;
-        
+
         private Texture _texture;
         private Texture _texture1;
         private Texture _diffuseMap;
 
         private Texture _specularMap;
         private Shader _lightingMapShader;
+        private Shader _lcDirectionalShader;
         private Shader basicLightingShader;
-        private IluminacaoAtual _estadoIluminacao = IluminacaoAtual.Nenhuma;
+        private Shader _shader;
+        private IluminacaoAtual _estadoIluminacao = IluminacaoAtual.Initial;
 
         // Camera
         private Camera _camera;
@@ -52,7 +51,7 @@ namespace gcgcg
         private Vector3 _origin = new(0, 0, 0); // Origem do espaço 3D
 
         private Cubo _centralCube;
-        
+
         // Orbiting cube
         private Cubo _orbitingCube;
         private float orbitSpeed = 0.15f; // Speed of the orbit
@@ -99,15 +98,19 @@ namespace gcgcg
 
             _lightingMapShader = new Shader("Shaders/lightingMap.vert", "Shaders/lightingMap.frag");
             basicLightingShader = new Shader("Shaders/basicLighting.vert", "Shaders/lighting.frag");
+            _lcDirectionalShader = new Shader("Shaders/Lc_directional.vert", "Shaders/Lc_directional.frag");
 
-
+            _shader = new Shader("Shaders/shader_texture.vert", "Shaders/shader_texture.frag");
+           
+            _shader.Use();
 
 
             _texture = Texture.LoadFromFile("Resources/adam.jpg");
+            _shader.SetInt("texture0", 0);
             _texture.Use(TextureUnit.Texture0);
             _texture1 = Texture.LoadFromFile("Resources/ricardo.jpg");
+            _shader.SetInt("texture1", 1);
             _texture1.Use(TextureUnit.Texture1);
-
             GL.GetError();
 
             #endregion
@@ -137,9 +140,6 @@ namespace gcgcg
 
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            _texture.Use(TextureUnit.Texture0);
-            _texture1.Use(TextureUnit.Texture1);
-
             switch (_estadoIluminacao)
             {
                 case IluminacaoAtual.BasicLighting:
@@ -162,9 +162,9 @@ namespace gcgcg
 
                     // Renderizar o cubo central
                     _centralCube.Desenhar(new Transformacao4D(), _camera);
-
                     // Renderizar o cubo orbitante com o mesmo shader
                     _orbitingCube.Desenhar(new Transformacao4D(), _camera);
+                    mundo.shaderCor = basicLightingShader;
                     break;
                 case IluminacaoAtual.LightingMaps:
                     // Vincular as texturas
@@ -172,9 +172,6 @@ namespace gcgcg
                     _specularMap.Use(TextureUnit.Texture1);
                     _lightingMapShader.Use();
 
-                    _lightingMapShader.SetMatrix4("model", Matrix4.Identity);
-                    _lightingMapShader.SetMatrix4("view", _camera.GetViewMatrix());
-                    _lightingMapShader.SetMatrix4("projection", _camera.GetProjectionMatrix());
                     _lightingMapShader.SetVector3("viewPos", _camera.Position);
 
                     // Configurações dos materiais
@@ -190,21 +187,54 @@ namespace gcgcg
                     _lightingMapShader.SetVector3("light.specular", new Vector3(1.0f));
 
                     _centralCube.shaderCor = _lightingMapShader;
-                    // Renderizar o cubo central
                     _centralCube.Desenhar(new Transformacao4D(), _camera);
+                    
+                    break;
+                case IluminacaoAtual.LcDiretional:
 
+                    _diffuseMap.Use(TextureUnit.Texture0);
+                    _specularMap.Use(TextureUnit.Texture1);
+                    _lcDirectionalShader.Use();
+
+                    _lcDirectionalShader.SetVector3("viewPos", _camera.Position);
+
+                    _lcDirectionalShader.SetInt("material.diffuse", 0);
+                    _lcDirectionalShader.SetInt("material.specular", 1);
+                    _lcDirectionalShader.SetVector3("material.specular", new Vector3(0.5f, 0.5f, 0.5f));
+                    _lcDirectionalShader.SetFloat("material.shininess", 32.0f);
+
+                    // Directional light needs a direction, in this example we just use (-0.2, -1.0, -0.3f) as the lights direction
+                    _lcDirectionalShader.SetVector3("light.direction", new Vector3(-0.2f, -1.0f, -0.3f));
+                    _lcDirectionalShader.SetVector3("light.ambient", new Vector3(0.2f));
+                    _lcDirectionalShader.SetVector3("light.diffuse", new Vector3(0.5f));
+                    _lcDirectionalShader.SetVector3("light.specular", new Vector3(1.0f));
+
+
+
+                    _centralCube.shaderCor = _lcDirectionalShader;
+                    _centralCube.Desenhar(new Transformacao4D(), _camera);
                     break;
                 case IluminacaoAtual.Nenhuma:
-                    _centralCube.shaderCor = _shaderCiano;
+
+                    _shader.SetMatrix4("view", _camera.GetViewMatrix());
+                    _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                    _shader.SetMatrix4("model", Matrix4.Identity);
+
+                    _texture.Use(TextureUnit.Texture0);
+                    _texture1.Use(TextureUnit.Texture1);
+                    _shader.Use();
+
+                    _centralCube.shaderCor = _shader;
                     _centralCube.Desenhar(new Transformacao4D(), _camera);
+                    
                     break;
                 default:
                     // Renderização padrão
                     break;
             }
 
-            
-            
+
+
             mundo.Desenhar(new Transformacao4D(), _camera);
 
             GL.GetError();
@@ -220,7 +250,7 @@ namespace gcgcg
             {
                 return;
             }
-            
+
             _orbitingCube.MatrizRotacao(orbitSpeed);
 
             #region Teclado
@@ -272,6 +302,8 @@ namespace gcgcg
                 _estadoIluminacao = IluminacaoAtual.BasicLighting;
             if (input.IsKeyPressed(Keys.D2))
                 _estadoIluminacao = IluminacaoAtual.LightingMaps;
+            if (input.IsKeyPressed(Keys.D3))
+                _estadoIluminacao = IluminacaoAtual.LcDiretional;
 
             if (input.IsKeyDown(Keys.Z))
             {
@@ -279,16 +311,16 @@ namespace gcgcg
             }
 
             // Calcula os vetores de direção da câmera (front, right, up) com base na posição da câmera
-            
+
             // _origin - _camera.Position: Retorna um vetor apontando da posição da câmera em direção a origem.
             var front = Vector3.Normalize(_origin - _camera.Position);
-            
+
             // Vector3.Cross(front, Vector3.UnitY): Calcula o produto vetorial entre os vetores front e up (UnitY)
             var right = Vector3.Normalize(Vector3.Cross(front, Vector3.UnitY));
-            
+
             // Vector3.Cross(front, Vector3.UnitY): Calcula o produto vetorial entre os vetores right e front
             var up = Vector3.Normalize(Vector3.Cross(right, front));
-            
+
             // O produto vetorial de dois vetores resulta em um vetor perpendicular a ambos, fornecendo a direção
             // da direita relativa à direção voltada para a câmera.
             // Vector3.Normalize(...): A normalização dos vetores garante sejam um vetor unitário.
@@ -387,8 +419,10 @@ namespace gcgcg
     }
     public enum IluminacaoAtual
     {
+        Initial,
         Nenhuma,
         BasicLighting,
-        LightingMaps
+        LightingMaps,
+        LcDiretional,
     }
 }

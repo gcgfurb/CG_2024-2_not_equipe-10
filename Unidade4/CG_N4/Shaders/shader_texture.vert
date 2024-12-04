@@ -4,6 +4,10 @@ layout(location = 0) in vec3 aPosition;
 
 // We add another input variable for the texture coordinates.
 
+uniform mat4 model;
+uniform mat4 view;
+uniform mat4 projection;
+
 layout(location = 1) in vec2 aTexCoord;
 
 // ...However, they aren't needed for the vertex shader itself.
@@ -18,5 +22,5 @@ void main(void)
 
     texCoord = aTexCoord;
 
-    gl_Position = vec4(aPosition, 1.0);
+    gl_Position = vec4(aPosition, 1.0) * model * view * projection;
 }
