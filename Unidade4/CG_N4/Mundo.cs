@@ -11,8 +11,6 @@ using OpenTK.Mathematics;
 using System.Reflection.Metadata;
 using System.Resources;
 
-//FIXME: padrão Singleton
-
 namespace gcgcg
 {
     public class Mundo : GameWindow
@@ -25,7 +23,7 @@ namespace gcgcg
             -0.5f, 0.0f, 0.0f, /* X- */ 0.5f, 0.0f, 0.0f, /* X+ */
             0.0f, -0.5f, 0.0f, /* Y- */ 0.0f, 0.5f, 0.0f, /* Y+ */
             0.0f, 0.0f, -0.5f, /* Z- */ 0.0f, 0.0f, 0.5f /* Z+ */
-        };
+                  };
 
         private int _vertexBufferObject;
         private int _vaoModel;
@@ -38,9 +36,14 @@ namespace gcgcg
         private Shader _shaderMagenta;
         private Shader _shaderAmarela;
         
-        private Shader _shader;
         private Texture _texture;
         private Texture _texture1;
+        private Texture _diffuseMap;
+
+        private Texture _specularMap;
+        private Shader _lightingMapShader;
+        private Shader basicLightingShader;
+        private IluminacaoAtual _estadoIluminacao = IluminacaoAtual.Nenhuma;
 
         // Camera
         private Camera _camera;
@@ -94,16 +97,10 @@ namespace gcgcg
             GL.EnableVertexAttribArray(0);
 
 
-            _shader = new Shader("Shaders/shader_texture.vert", "Shaders/shader_texture.frag");
-            _shader.Use();
+            _lightingMapShader = new Shader("Shaders/lightingMap.vert", "Shaders/lightingMap.frag");
+            basicLightingShader = new Shader("Shaders/basicLighting.vert", "Shaders/lighting.frag");
 
-            var vertexLocation = _shader.GetAttribLocation("aPosition");
-            GL.EnableVertexAttribArray(vertexLocation);
-            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
 
-            var texCoordLocation = _shader.GetAttribLocation("aTexCoord");
-            GL.EnableVertexAttribArray(texCoordLocation);
-            GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 3 * sizeof(float), 3 * sizeof(float));
 
 
             _texture = Texture.LoadFromFile("Resources/adam.jpg");
@@ -111,14 +108,13 @@ namespace gcgcg
             _texture1 = Texture.LoadFromFile("Resources/ricardo.jpg");
             _texture1.Use(TextureUnit.Texture1);
 
-            _shader.SetInt("texture0", 0);
-            _shader.SetInt("texture1", 1);
             GL.GetError();
 
             #endregion
 
             #region Objeto: Cubo maior
             _centralCube = new Cubo(mundo, ref rotuloNovo);
+            _centralCube.shaderCor = _shaderCiano;
             #endregion
 
             #region Objeto: Cubo menor
@@ -127,6 +123,9 @@ namespace gcgcg
             _orbitingCube.MatrizTranslacaoXYZ(2.7, 0.8, 0);
             _orbitingCube.shaderCor = _shaderAmarela;
             #endregion
+
+            _diffuseMap = Texture.LoadFromFile("Resources/container2.png");
+            _specularMap = Texture.LoadFromFile("Resources/container2_specular.png");
 
             _camera = new Camera(Vector3.UnitZ * 5, Size.X / (float)Size.Y);
             CursorState = CursorState.Grabbed;
@@ -140,8 +139,72 @@ namespace gcgcg
 
             _texture.Use(TextureUnit.Texture0);
             _texture1.Use(TextureUnit.Texture1);
-            _shader.Use();
 
+            switch (_estadoIluminacao)
+            {
+                case IluminacaoAtual.BasicLighting:
+                    // Configuração do shader para BasicLighting
+                    basicLightingShader.Use();
+                    basicLightingShader.SetVector3("objectColor", new Vector3(0.0f, 1.0f, 1.0f)); // Cor do objeto
+                    basicLightingShader.SetVector3("lightColor", new Vector3(1.0f, 1.0f, 1.0f));  // Luz branca
+                    basicLightingShader.SetVector3("lightPos", new Vector3(1.2f, 1.0f, 2.0f));    // Posição da luz
+
+                    // Atualize as matrizes view e projection
+                    basicLightingShader.SetMatrix4("view", _camera.GetViewMatrix());
+                    basicLightingShader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                    basicLightingShader.SetMatrix4("model", Matrix4.Identity);
+
+                    // Atualize a posição da câmera
+                    basicLightingShader.SetVector3("viewPos", _camera.Position);
+
+                    // Renderize o objeto central com o shader de iluminação
+                    _centralCube.shaderCor = basicLightingShader;
+
+                    // Renderizar o cubo central
+                    _centralCube.Desenhar(new Transformacao4D(), _camera);
+
+                    // Renderizar o cubo orbitante com o mesmo shader
+                    _orbitingCube.Desenhar(new Transformacao4D(), _camera);
+                    break;
+                case IluminacaoAtual.LightingMaps:
+                    // Vincular as texturas
+                    _diffuseMap.Use(TextureUnit.Texture0);
+                    _specularMap.Use(TextureUnit.Texture1);
+                    _lightingMapShader.Use();
+
+                    _lightingMapShader.SetMatrix4("model", Matrix4.Identity);
+                    _lightingMapShader.SetMatrix4("view", _camera.GetViewMatrix());
+                    _lightingMapShader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                    _lightingMapShader.SetVector3("viewPos", _camera.Position);
+
+                    // Configurações dos materiais
+                    _lightingMapShader.SetInt("material.diffuse", 0);
+                    _lightingMapShader.SetInt("material.specular", 1);
+                    _lightingMapShader.SetVector3("material.specular", new Vector3(0.5f, 0.5f, 0.5f));
+                    _lightingMapShader.SetFloat("material.shininess", 32.0f);
+
+                    // Configurações de iluminação
+                    _lightingMapShader.SetVector3("light.position", new Vector3(1.2f, 1.0f, 2.0f));
+                    _lightingMapShader.SetVector3("light.ambient", new Vector3(0.2f));
+                    _lightingMapShader.SetVector3("light.diffuse", new Vector3(0.5f));
+                    _lightingMapShader.SetVector3("light.specular", new Vector3(1.0f));
+
+                    _centralCube.shaderCor = _lightingMapShader;
+                    // Renderizar o cubo central
+                    _centralCube.Desenhar(new Transformacao4D(), _camera);
+
+                    break;
+                case IluminacaoAtual.Nenhuma:
+                    _centralCube.shaderCor = _shaderCiano;
+                    _centralCube.Desenhar(new Transformacao4D(), _camera);
+                    break;
+                default:
+                    // Renderização padrão
+                    break;
+            }
+
+            
+            
             mundo.Desenhar(new Transformacao4D(), _camera);
 
             GL.GetError();
@@ -203,6 +266,12 @@ namespace gcgcg
                 objetoSelecionado.MatrizRotacaoZBBox(10);
             if (input.IsKeyPressed(Keys.D4) && objetoSelecionado != null)
                 objetoSelecionado.MatrizRotacaoZBBox(-10);*/
+            if (input.IsKeyPressed(Keys.D0))
+                _estadoIluminacao = IluminacaoAtual.Nenhuma;
+            if (input.IsKeyPressed(Keys.D1))
+                _estadoIluminacao = IluminacaoAtual.BasicLighting;
+            if (input.IsKeyPressed(Keys.D2))
+                _estadoIluminacao = IluminacaoAtual.LightingMaps;
 
             if (input.IsKeyDown(Keys.Z))
             {
@@ -315,5 +384,11 @@ namespace gcgcg
 
             base.OnUnload();
         }
+    }
+    public enum IluminacaoAtual
+    {
+        Nenhuma,
+        BasicLighting,
+        LightingMaps
     }
 }
